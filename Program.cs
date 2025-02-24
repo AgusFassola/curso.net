@@ -12,13 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 //area de servicios
 
+builder.Services.AddDataProtection();//para encriptar
+
 var origenesPermitidos = builder.Configuration.GetSection("origenesPermitidos").Get<string[]>()!;
 
 builder.Services.AddCors(opciones =>
 {
     opciones.AddDefaultPolicy(opcionesCORS =>
     {
-        opcionesCORS.WithOrigins(origenesPermitidos).AllowAnyMethod().AllowAnyHeader();
+        opcionesCORS.WithOrigins(origenesPermitidos).AllowAnyMethod().AllowAnyHeader()
+        .WithExposedHeaders("mi-cabecera");
     });
 });
 
@@ -36,6 +39,7 @@ builder.Services.AddIdentityCore<Usuario>()
 builder.Services.AddScoped<UserManager<Usuario>>();
 builder.Services.AddScoped<SignInManager<Usuario>>();
 builder.Services.AddTransient<IServiciosUsuarios, ServiciosUsuarios>();
+builder.Services.AddTransient<IServicioHash, ServicioHash>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -66,6 +70,12 @@ var app = builder.Build();
 //app.UseLogueaPeticion();
 
 //app.UseBloqueaPeticion();
+app.Use(async (contexto, next) =>
+{
+    contexto.Response.Headers.Append("mi-cabecera", "valor");
+    await next();
+});
+
 app.UseCors();
 
 app.MapControllers();
