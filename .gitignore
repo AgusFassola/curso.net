@@ -1,0 +1,7 @@
+# Carpetas y archivos de Visual Studio
+.vs/
+*.user
+*.suo
+.vscode/
+bin/
+obj/
