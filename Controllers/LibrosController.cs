@@ -2,6 +2,7 @@
 using BibliotecaAPI.Datos;
 using BibliotecaAPI.DTOs;
 using BibliotecaAPI.Entidades;
+using BibliotecaAPI.Utilidades;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
@@ -19,53 +20,28 @@ namespace BibliotecaAPI.Controllers
     {
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
-        private readonly ITimeLimitedDataProtector protectorLimitadoPorTiempo;
 
-        public LibrosController(ApplicationDbContext context, IMapper mapper, IDataProtectionProvider protectionProvider)//asignarlo y crear un campo
+        public LibrosController(ApplicationDbContext context, IMapper mapper)//asignarlo y crear un campo
         {
             this.context = context;
             this.mapper = mapper;
-            protectorLimitadoPorTiempo = protectionProvider
-                .CreateProtector("LibrosController").ToTimeLimitedDataProtector();
-        }
-
-        [HttpGet("listado/obtener-token")]
-        public ActionResult ObtenerTokenListado()
-        {
-            var textoPlano = Guid.NewGuid().ToString();
-            var token = protectorLimitadoPorTiempo.Protect(textoPlano, lifetime: TimeSpan.FromSeconds(30));
-            var url = Url.RouteUrl("ObtenerListadoLibrosUsandoToken", new { token }, "https");
-            return Ok(new { url });
-        }
-
-        [HttpGet("listado/{token}", Name = "ObtenerListadoLibrosUsandoToken")]
-        [AllowAnonymous]
-        public async Task<ActionResult> ObtenerListadoUsandoToken(string token)
-        {
-            try
-            {
-                protectorLimitadoPorTiempo.Unprotect(token);
-            }
-            catch
-            {
-                ModelState.AddModelError(nameof(token), "el token ha expirado");
-                return ValidationProblem();
-            }
-            var libros = await context.Libros.ToListAsync();//para crear una lista con los libros
-            var librosDTO = mapper.Map<IEnumerable<LibroDTO>>(libros);
-            return Ok(librosDTO);
-
         }
 
         [HttpGet]
-        public async Task<IEnumerable<LibroDTO>> Get()
+        [AllowAnonymous]
+        public async Task<IEnumerable<LibroDTO>> Get([FromQuery] PaginacionDTO paginacionDTO)
         {
-            var libros = await context.Libros.ToListAsync();//para crear una lista con los libros
+            var queryable = context.Libros.AsQueryable();
+            await HttpContext.InsertarParametrosPaginacionEnCabecera(queryable);
+            var libros = await queryable
+                .OrderBy(x => x.Titulo)
+                .Paginar(paginacionDTO).ToListAsync();
             var librosDTO = mapper.Map<IEnumerable<LibroDTO>>(libros);
             return librosDTO;
         }
 
         [HttpGet("{id:int}", Name = "ObtenerLibro")] //le estoy agregando un id al /api/libros
+        [AllowAnonymous]
         public async Task<ActionResult<LibroConAutoresDTO>> Get(int id)
         {
             var libro = await context.Libros

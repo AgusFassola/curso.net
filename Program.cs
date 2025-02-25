@@ -2,9 +2,11 @@ using BibliotecaAPI;
 using BibliotecaAPI.Datos;
 using BibliotecaAPI.Entidades;
 using BibliotecaAPI.Servicios;
+using BibliotecaAPI.Swagger;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -21,7 +23,7 @@ builder.Services.AddCors(opciones =>
     opciones.AddDefaultPolicy(opcionesCORS =>
     {
         opcionesCORS.WithOrigins(origenesPermitidos).AllowAnyMethod().AllowAnyHeader()
-        .WithExposedHeaders("mi-cabecera");
+        .WithExposedHeaders("cantidad-total-registros");
     });
 });
 
@@ -39,7 +41,6 @@ builder.Services.AddIdentityCore<Usuario>()
 builder.Services.AddScoped<UserManager<Usuario>>();
 builder.Services.AddScoped<SignInManager<Usuario>>();
 builder.Services.AddTransient<IServiciosUsuarios, ServiciosUsuarios>();
-builder.Services.AddTransient<IServicioHash, ServicioHash>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -63,6 +64,52 @@ builder.Services.AddAuthorization(opciones =>
     opciones.AddPolicy("esadmin", politica => politica.RequireClaim("esadmin"));
 });
 
+builder.Services.AddSwaggerGen(opciones =>
+{
+    opciones.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Biblioteca API",
+        Description = "Este es un web API",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Email = "agus@gmail.com",
+            Name = "Agus Fassola",
+            Url = new Uri("https://gavilan.blog")
+        },
+        License = new Microsoft.OpenApi.Models.OpenApiLicense
+        {
+            Name = "MIT",
+            Url = new Uri("https://opensource.org/license/mit/")
+        }
+    });
+
+    opciones.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
+    });
+
+    opciones.OperationFilter<FiltroAutorizacion>();
+
+    //opciones.AddSecurityRequirement(new OpenApiSecurityRequirement
+    //{
+    //    {
+    //        new OpenApiSecurityScheme
+    //        {
+    //            Reference = new OpenApiReference
+    //            {
+    //                Type = ReferenceType.SecurityScheme,
+    //                Id = "Bearer"
+    //            }
+    //        },
+    //        new string[]{}
+    //    }
+    //});
+});
+
 var app = builder.Build();
 
 //area de middlewares
@@ -70,11 +117,9 @@ var app = builder.Build();
 //app.UseLogueaPeticion();
 
 //app.UseBloqueaPeticion();
-app.Use(async (contexto, next) =>
-{
-    contexto.Response.Headers.Append("mi-cabecera", "valor");
-    await next();
-});
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors();
 
