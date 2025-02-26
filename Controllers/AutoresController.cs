@@ -129,7 +129,7 @@ namespace BibliotecaAPI.Controllers
                     .Autores.Where(x => x.Id == id)
                     .Select(x => x.Foto).FirstAsync();
 
-                var url = await almacenadorArchivos.Editar(fotoActual, contenedor
+                var url = await almacenadorArchivos.Editar(fotoActual, contenedor,
                     autorCreacionDTO.Foto);
                 autor.Foto = url;
             }
