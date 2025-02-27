@@ -14,6 +14,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 //area de servicios
 
+builder.Services.AddOutputCache(opciones =>
+{
+    opciones.DefaultExpirationTimeSpan = TimeSpan.FromSeconds(15);
+});
+
 builder.Services.AddDataProtection();//para encriptar
 
 var origenesPermitidos = builder.Configuration.GetSection("origenesPermitidos").Get<string[]>()!;
@@ -122,7 +127,11 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseStaticFiles();
+
 app.UseCors();
+
+app.UseOutputCache();
 
 app.MapControllers();
 

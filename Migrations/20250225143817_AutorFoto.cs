@@ -10,10 +10,10 @@ namespace BibliotecaAPI.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "FechaDNacimiento",
-                table: "AspNetUsers",
-                newName: "FechaNacimiento");
+            //migrationBuilder.RenameColumn(
+            //    name: "FechaDNacimiento",
+            //    table: "AspNetUsers",
+            //    newName: "FechaNacimiento");
 
             migrationBuilder.AddColumn<string>(
                 name: "Foto",

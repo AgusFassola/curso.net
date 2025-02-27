@@ -6,6 +6,7 @@ using BibliotecaAPI.Servicios;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 
 namespace BibliotecaAPI.Controllers
@@ -18,16 +19,21 @@ namespace BibliotecaAPI.Controllers
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
         private readonly IServiciosUsuarios serviciosUsuarios;
+        private readonly IOutputCacheStore outputCacheStore;
+        private const string cache = "comentarios-obtener";
 
         public ComentariosController(ApplicationDbContext context, IMapper mapper,
-            IServiciosUsuarios serviciosUsuarios)
+            IServiciosUsuarios serviciosUsuarios, IOutputCacheStore outputCacheStore)
         {
             this.context = context;
             this.mapper = mapper;
             this.serviciosUsuarios = serviciosUsuarios;
+            this.outputCacheStore = outputCacheStore;
         }
         [HttpGet]
         [AllowAnonymous]
+        [OutputCache(Tags = [cache])]
+
         public async Task<ActionResult<List<ComentarioDTO>>> Get(int libroId)
         {
             var existeLibro = await context.Libros.AnyAsync( x => x.Id == libroId);
@@ -45,6 +51,9 @@ namespace BibliotecaAPI.Controllers
 
         [HttpGet("{id}", Name = "ObtenerComentario")]
         [AllowAnonymous]
+        [OutputCache(Tags = [cache])]
+
+
         public async Task<ActionResult<ComentarioDTO>> Get(Guid id)
         {
             var comentario = await context.Comentarios
@@ -80,6 +89,7 @@ namespace BibliotecaAPI.Controllers
             comentario.UsuarioId = usuario.Id;
             context.Add(comentario);
             await context.SaveChangesAsync();
+            await outputCacheStore.EvictByTagAsync(cache, default);
             var comentarioDTO = mapper.Map<ComentarioDTO>(comentario);
             return CreatedAtRoute("ObtenerComentario", new { id = comentario.Id, libroId }, comentarioDTO);
         }
@@ -130,6 +140,7 @@ namespace BibliotecaAPI.Controllers
             mapper.Map(comentarioPatchDTO, comentarioDB);
 
             await context.SaveChangesAsync();
+            await outputCacheStore.EvictByTagAsync(cache, default);
 
             return NoContent();
         }
@@ -164,6 +175,7 @@ namespace BibliotecaAPI.Controllers
             comentarioDB.EstaBorrado = true;
             context.Update(comentarioDB);
             await context.SaveChangesAsync();
+            await outputCacheStore.EvictByTagAsync(cache, default);
 
             return NoContent();
         }
