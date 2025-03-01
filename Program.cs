@@ -3,6 +3,8 @@ using BibliotecaAPI.Datos;
 using BibliotecaAPI.Entidades;
 using BibliotecaAPI.Servicios;
 using BibliotecaAPI.Swagger;
+using BibliotecaAPI.Utilidades;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -38,7 +40,10 @@ builder.Services.AddCors(opciones =>
 
 builder.Services.AddAutoMapper(typeof(Program));
 
-builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddControllers( opciones =>
+{
+    opciones.Filters.Add<FiltroTiempoEjecucion>();
+}).AddNewtonsoftJson();
 
 builder.Services.AddDbContext<ApplicationDbContext>(opciones => 
     opciones.UseSqlServer("name=DefaultConnection"));
@@ -51,6 +56,12 @@ builder.Services.AddScoped<UserManager<Usuario>>();
 builder.Services.AddScoped<SignInManager<Usuario>>();
 builder.Services.AddTransient<IServiciosUsuarios, ServiciosUsuarios>();
 builder.Services.AddTransient<IAlmacenadorArchivos, AlmacenadorArchivosAzure>();
+builder.Services.AddScoped<MiFiltroDeAccion>();
+builder.Services.AddScoped<FiltroValidacionLibro>();
+builder.Services.AddScoped<BibliotecaAPI.Servicios.V1.IServicioAutores, 
+    BibliotecaAPI.Servicios.V1.ServicioAutores>();
+
+
 
 builder.Services.AddHttpContextAccessor();
 
@@ -127,6 +138,28 @@ var app = builder.Build();
 //app.UseLogueaPeticion();
 
 //app.UseBloqueaPeticion();
+
+app.UseExceptionHandler(exceptionHandlerApp => exceptionHandlerApp.Run(async context =>
+{
+    var exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
+    var exception = exceptionHandlerFeature?.Error!;
+
+    var error = new Error()
+    {
+        MensajeDeError = exception.Message,
+        StrackTrace = exception.StackTrace,
+        Fecha = DateTime.UtcNow
+    };
+    var dbContext = context.RequestServices.GetRequiredService<ApplicationDbContext>();
+    dbContext.Add(error);
+    await dbContext.SaveChangesAsync();
+    await Results.InternalServerError(new
+    {
+        tipo = "error",
+        mensaje = "Ha ocurrido un error inesperado",
+        status = 500
+    }).ExecuteAsync(context);
+}));
 
 app.UseSwagger();
 app.UseSwaggerUI();
