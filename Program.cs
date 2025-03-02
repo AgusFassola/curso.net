@@ -43,6 +43,7 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddControllers( opciones =>
 {
     opciones.Filters.Add<FiltroTiempoEjecucion>();
+    opciones.Conventions.Add(new ConvencionAgrupaPorVersion());
 }).AddNewtonsoftJson();
 
 builder.Services.AddDbContext<ApplicationDbContext>(opciones => 
@@ -89,6 +90,25 @@ builder.Services.AddSwaggerGen(opciones =>
 {
     opciones.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
+        Version = "v1",
+        Title = "Biblioteca API",
+        Description = "Este es un web API",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Email = "agus@gmail.com",
+            Name = "Agus Fassola",
+            Url = new Uri("https://gavilan.blog")
+        },
+        License = new Microsoft.OpenApi.Models.OpenApiLicense
+        {
+            Name = "MIT",
+            Url = new Uri("https://opensource.org/license/mit/")
+        }
+    });
+    
+    opciones.SwaggerDoc("v2", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Version = "v2",
         Title = "Biblioteca API",
         Description = "Este es un web API",
         Contact = new Microsoft.OpenApi.Models.OpenApiContact
@@ -162,7 +182,12 @@ app.UseExceptionHandler(exceptionHandlerApp => exceptionHandlerApp.Run(async con
 }));
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(opciones =>
+{
+    opciones.SwaggerEndpoint("/swagger/v1/swagger.json", "Biblioteca API V1");
+    opciones.SwaggerEndpoint("/swagger/v2/swagger.json", "Biblioteca API V2");
+
+});
 
 app.UseStaticFiles();
 

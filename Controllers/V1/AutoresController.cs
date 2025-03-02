@@ -2,6 +2,7 @@
 using BibliotecaAPI.Datos;
 using BibliotecaAPI.DTOs;
 using BibliotecaAPI.Entidades;
+using BibliotecaAPI.Migrations;
 using BibliotecaAPI.Servicios;
 using BibliotecaAPI.Servicios.V1;
 using BibliotecaAPI.Utilidades;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System;
 using System.ComponentModel;
 using System.Linq.Dynamic.Core;
 //using System.Reflection.Metadata.Ecma335;
@@ -46,15 +48,50 @@ namespace BibliotecaAPI.Controllers.V1
         }
 
         //[HttpGet("/lista-de-autores")]// para acceder tambien desde la ruta localhost/lista-de-autores
-        [HttpGet]
+        [HttpGet(Name ="ObtenerAutoresV1")]
         [AllowAnonymous]//permise acceder a cualquiera aunque tenga un authorize
         [OutputCache(Tags = [cache])]
         [ServiceFilter<MiFiltroDeAccion>()]
         [FiltroAgregarCabeceras("accion", "obtener-autores")]
 
-        public async Task<IEnumerable<AutorDTO>> Get([FromQuery] PaginacionDTO paginacionDTO)
+        public async Task<ActionResult> 
+            Get([FromQuery] PaginacionDTO paginacionDTO,
+            [FromQuery] bool incluirHATEOAS = false)
         {
-            return await servicioAutoresV1.Get(paginacionDTO);
+            var dtos = await servicioAutoresV1.Get(paginacionDTO);
+
+            if (incluirHATEOAS)
+            {
+
+                foreach (var dto in dtos)
+                {
+                    GenerarEnlaces(dto);
+                }
+
+                var resultado = new ColeccionDeRecursosDTO<AutorDTO> { Valores = dtos };
+
+                resultado.Enlaces.Add(
+                    new DatosHATEOASDTO(
+                        Enlace: Url.Link("ObtenerAutoresV1", new { })!,
+                        Descripcion: "self",
+                        Metodo: "GET"));
+
+                resultado.Enlaces.Add(
+                    new DatosHATEOASDTO(
+                        Enlace: Url.Link("CrearAutorV1", new { })!,
+                        Descripcion: "autor-crear",
+                        Metodo: "POST"));
+
+                resultado.Enlaces.Add(
+                    new DatosHATEOASDTO(
+                        Enlace: Url.Link("CrearAutorConFotoV1", new { })!,
+                        Descripcion: "autor-crear-con-foto",
+                        Metodo: "POST"));
+
+                return Ok(resultado);
+            }           
+
+            return Ok(dtos);
         }
 
         //[HttpGet("primero")]//api/autores/primero
@@ -83,10 +120,43 @@ namespace BibliotecaAPI.Controllers.V1
                 return NotFound();
             }
             var autorDTO = mapper.Map<AutorConLibrosDTO>(autor);
+
+            GenerarEnlaces(autorDTO);
+
             return autorDTO;
         }
 
-        [HttpGet("filtrar")]
+        private void GenerarEnlaces(AutorDTO autorDTO)
+        {
+            autorDTO.Enlaces.Add(
+                new DatosHATEOASDTO(
+                    Enlace: Url.Link("ObtenerAutorV1", new { id = autorDTO.Id })!,
+                    Descripcion: "self",
+                    Metodo: "GET"));
+
+            autorDTO.Enlaces.Add(
+                new DatosHATEOASDTO(
+                    Enlace: Url.Link("ActualizarAutorV1", new { id = autorDTO.Id })!,
+                    Descripcion: "autor-actualizar",
+                    Metodo: "PUT"));
+
+            autorDTO.Enlaces.Add(
+                new DatosHATEOASDTO(
+                    Enlace: Url.Link("PatchAutorV1", new { id = autorDTO.Id })!,
+                    Descripcion: "autor-patch",
+                    Metodo: "PATCH"));
+        
+            
+        
+            autorDTO.Enlaces.Add(
+                new DatosHATEOASDTO(
+                    Enlace: Url.Link("BorrarAutorV1", new { id = autorDTO.Id })!,
+                    Descripcion: "autor-borrar",
+                    Metodo: "DELETE"));
+        
+        }
+
+        [HttpGet("filtrar", Name = "FiltrarAutoresV1")]
         [AllowAnonymous]
         public async Task<ActionResult> Filtrar([FromQuery] AutorFiltroDTO autorFiltroDTO)
         {
@@ -176,7 +246,7 @@ namespace BibliotecaAPI.Controllers.V1
             } 
         } 
         
-        [HttpPost]
+        [HttpPost(Name = "CrearAutorV1")]
         public async Task<ActionResult> Post(AutorCreacionDTO autorCreacionDTO)
         {
             var autor = mapper.Map<Autor>(autorCreacionDTO);
@@ -187,7 +257,7 @@ namespace BibliotecaAPI.Controllers.V1
             return CreatedAtRoute("ObtenerAutorV1", new {id = autor.Id}, autorDTO);
         }
 
-        [HttpPost("con-foto")]
+        [HttpPost("con-foto", Name = "CrearAutorConFotoV1")]
         public async Task<ActionResult> PostConFoto([FromForm]
             AutorCreacionDTOConFoto autorCreacionDTO)
         {
@@ -208,7 +278,7 @@ namespace BibliotecaAPI.Controllers.V1
             return CreatedAtRoute("ObtenerAutorV1", new { id = autor.Id }, autorDTO);
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{id:int}", Name = "ActualizarAutorV1")]
         public async Task<ActionResult> Put(int id, 
             [FromForm] AutorCreacionDTOConFoto autorCreacionDTO)
         {
@@ -241,7 +311,7 @@ namespace BibliotecaAPI.Controllers.V1
             return NoContent();//204
         }
 
-        [HttpPatch("{id:int}")]
+        [HttpPatch("{id:int}", Name ="PatchAutorV1")]
         public async Task<ActionResult> Patch(int id, JsonPatchDocument<AutorPatchDTO> patchDoc)
         {
             if(patchDoc is null)
@@ -274,7 +344,7 @@ namespace BibliotecaAPI.Controllers.V1
             return NoContent();
         }
 
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id:int}", Name ="BorrarAutorV1")]
         public async Task<ActionResult> Delete(int id)
         {
             var autor = await context.Autores.FirstOrDefaultAsync(x => x.Id == id);
