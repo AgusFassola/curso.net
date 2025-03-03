@@ -2,8 +2,10 @@ using BibliotecaAPI;
 using BibliotecaAPI.Datos;
 using BibliotecaAPI.Entidades;
 using BibliotecaAPI.Servicios;
+using BibliotecaAPI.Servicios.V1;
 using BibliotecaAPI.Swagger;
 using BibliotecaAPI.Utilidades;
+using BibliotecaAPI.Utilidades.V1;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -62,6 +64,11 @@ builder.Services.AddScoped<FiltroValidacionLibro>();
 builder.Services.AddScoped<BibliotecaAPI.Servicios.V1.IServicioAutores, 
     BibliotecaAPI.Servicios.V1.ServicioAutores>();
 
+builder.Services.AddScoped<BibliotecaAPI.Servicios.V1.IGeneradorEnlaces,
+    BibliotecaAPI.Servicios.V1.GeneradorEnlaces>();
+
+builder.Services.AddScoped<HATEOASAutorAttribute>();
+builder.Services.AddScoped<HATEOASAutoresAttribute>();
 
 
 builder.Services.AddHttpContextAccessor();
