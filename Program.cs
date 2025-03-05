@@ -158,33 +158,39 @@ builder.Services.AddSwaggerGen(opciones =>
 
 var app = builder.Build();
 
-//area de middlewares
-
-//app.UseLogueaPeticion();
-
-//app.UseBloqueaPeticion();
-
-app.UseExceptionHandler(exceptionHandlerApp => exceptionHandlerApp.Run(async context =>
+using (var scope = app.Services.CreateScope())
 {
-    var exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
-    var exception = exceptionHandlerFeature?.Error!;
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    if (dbContext.Database.IsRelational())
+    {
+        dbContext.Database.Migrate();
+    }
+}
 
-    var error = new Error()
+    //area de middlewares
+
+
+    app.UseExceptionHandler(exceptionHandlerApp => exceptionHandlerApp.Run(async context =>
     {
-        MensajeDeError = exception.Message,
-        StrackTrace = exception.StackTrace,
-        Fecha = DateTime.UtcNow
-    };
-    var dbContext = context.RequestServices.GetRequiredService<ApplicationDbContext>();
-    dbContext.Add(error);
-    await dbContext.SaveChangesAsync();
-    await Results.InternalServerError(new
-    {
-        tipo = "error",
-        mensaje = "Ha ocurrido un error inesperado",
-        status = 500
-    }).ExecuteAsync(context);
-}));
+        var exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
+        var exception = exceptionHandlerFeature?.Error!;
+
+        var error = new Error()
+        {
+            MensajeDeError = exception.Message,
+            StrackTrace = exception.StackTrace,
+            Fecha = DateTime.UtcNow
+        };
+        var dbContext = context.RequestServices.GetRequiredService<ApplicationDbContext>();
+        dbContext.Add(error);
+        await dbContext.SaveChangesAsync();
+        await Results.InternalServerError(new
+        {
+            tipo = "error",
+            mensaje = "Ha ocurrido un error inesperado",
+            status = 500
+        }).ExecuteAsync(context);
+    }));
 
 app.UseSwagger();
 app.UseSwaggerUI(opciones =>
@@ -202,5 +208,6 @@ app.UseOutputCache();
 
 app.MapControllers();
 
-
 app.Run();
+
+public partial class Program { }
