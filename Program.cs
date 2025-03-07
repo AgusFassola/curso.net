@@ -1,5 +1,6 @@
 using BibliotecaAPI;
 using BibliotecaAPI.Datos;
+using BibliotecaAPI.DTOs;
 using BibliotecaAPI.Entidades;
 using BibliotecaAPI.Servicios;
 using BibliotecaAPI.Servicios.V1;
@@ -68,6 +69,7 @@ builder.Services.AddScoped<BibliotecaAPI.Servicios.V1.IGeneradorEnlaces,
 builder.Services.AddScoped<HATEOASAutorAttribute>();
 builder.Services.AddScoped<HATEOASAutoresAttribute>();
 
+builder.Services.AddScoped<IServicioLlaves, ServicioLlaves>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -139,22 +141,12 @@ builder.Services.AddSwaggerGen(opciones =>
     });
 
     opciones.OperationFilter<FiltroAutorizacion>();
-
-    //opciones.AddSecurityRequirement(new OpenApiSecurityRequirement
-    //{
-    //    {
-    //        new OpenApiSecurityScheme
-    //        {
-    //            Reference = new OpenApiReference
-    //            {
-    //                Type = ReferenceType.SecurityScheme,
-    //                Id = "Bearer"
-    //            }
-    //        },
-    //        new string[]{}
-    //    }
-    //});
 });
+
+builder.Services.AddOptions<LimitarPeticionesDTO>()
+    .Bind(builder.Configuration.GetSection(LimitarPeticionesDTO.Seccion))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 var app = builder.Build();
 
@@ -203,6 +195,8 @@ app.UseSwaggerUI(opciones =>
 app.UseStaticFiles();
 
 app.UseCors();
+
+app.UseLimitarPeticiones();
 
 app.UseOutputCache();
 

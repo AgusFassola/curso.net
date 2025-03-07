@@ -25,10 +25,11 @@ namespace BibliotecaAPI.Controllers.V2
         private readonly IServiciosUsuarios serviciosUsuarios;
         private readonly ApplicationDbContext context;
         private readonly IMapper mapper;
+        private readonly IServicioLlaves servicioLlaves;
 
         public UsuariosController(UserManager<Usuario> userManager, IConfiguration configuration,
             SignInManager<Usuario> signInManager, IServiciosUsuarios serviciosUsuarios, ApplicationDbContext context,
-            IMapper mapper)
+            IMapper mapper, IServicioLlaves servicioLlaves)
         {
             this.userManager = userManager;
             this.configuration = configuration;
@@ -36,6 +37,7 @@ namespace BibliotecaAPI.Controllers.V2
             this.serviciosUsuarios = serviciosUsuarios;
             this.context = context;
             this.mapper = mapper;
+            this.servicioLlaves = servicioLlaves;
         }
 
         [HttpGet]
