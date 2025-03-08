@@ -79,6 +79,7 @@ namespace BibliotecaAPI.Utilidades
             var llaveDB = await context.LlavesAPI
                 .Include(x=>x.RestriccionesDominio)
                 .Include(x => x.RestriccionesIP)
+                .Include(x=>x.Usuario)
                 .FirstOrDefaultAsync(x => x.Llave == llave);
 
             if (llaveDB is null)
@@ -115,9 +116,14 @@ namespace BibliotecaAPI.Utilidades
                     await httpContext.Response.WriteAsync("Excedio peticiones por dia.");
                     return;
                 }
+            }else if (llaveDB.Usuario!.MalaPaga)
+            {
+                httpContext.Response.StatusCode = 400;
+                await httpContext.Response.WriteAsync("El usuario es un mala paga.");
+                return;
             }
 
-            var peticion = new Peticion() { LlaveId = llaveDB.Id, FechaPeticion = DateTime.UtcNow };
+                var peticion = new Peticion() { LlaveId = llaveDB.Id, FechaPeticion = DateTime.UtcNow };
             context.Add(peticion);
             await context.SaveChangesAsync();
 
